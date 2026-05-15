@@ -400,7 +400,7 @@ function buildFormData(d) {
         nombre:            d.nombre      || '',
         apellido1:         d.apellido1   || '',
         apellido2:         d.apellido2   || '',
-        nif:               d.nif         || '',
+        nif:               (d.nif || '').replace(/[.\-\s]/g, '').toUpperCase(),
         numdir:            d.numdir      || '',
         tlf1:              d.tlf1        || '',
         tlf2:              d.tlf2        || '',
@@ -426,7 +426,7 @@ function buildFormData(d) {
         tarifa:            d.dia_cargo   || '',
         fecha_primercobro: '',
         comp10:            '3',           // siempre F2F
-        cupsE:             '',
+        cupsE:             d.tipo_socio  || '',
         sppgas:            d.sexo        || '0',
         distribuidora2:    'CASTELLÀ',    // por defecto castellano
         api:               d.periodo     || '0',
