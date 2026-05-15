@@ -221,15 +221,17 @@
                 Asegúrate de que toda la letra sea legible.
             </p>
 
-            <input type="file" id="photo-input" accept="image/*" capture="environment"
+            <input type="file" id="photo-input-camera" accept="image/*" capture="environment"
+                   style="display:none" onchange="handlePhotoCapture(event)">
+            <input type="file" id="photo-input-gallery" accept="image/*"
                    style="display:none" onchange="handlePhotoCapture(event)">
 
             <button class="btn btn-red" id="capture-btn"
-                    onclick="document.getElementById('photo-input').click()">
+                    onclick="document.getElementById('photo-input-camera').click()">
                 📷 Hacer Foto
             </button>
             <button class="btn btn-gray" style="margin-top:2px"
-                    onclick="document.getElementById('photo-input').click()">
+                    onclick="document.getElementById('photo-input-gallery').click()">
                 🖼️ Elegir de la Galería
             </button>
 
