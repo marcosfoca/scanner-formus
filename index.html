@@ -1,0 +1,968 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0">
+    <title>Scanner F2F</title>
+    <style>
+        :root {
+            --red: #cc0000;
+            --blue: #094f82;
+            --light: #f4f6f8;
+            --border: #dde2e8;
+        }
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: var(--light);
+            color: #222;
+            min-height: 100vh;
+        }
+        header {
+            background: var(--red);
+            color: #fff;
+            padding: 14px 20px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            position: sticky;
+            top: 0;
+            z-index: 10;
+            box-shadow: 0 2px 6px rgba(0,0,0,.25);
+        }
+        header h1 { font-size: 1.05rem; font-weight: 700; letter-spacing: .3px; }
+        .container { max-width: 640px; margin: 0 auto; padding: 16px; }
+
+        /* Steps */
+        .step { display: none; }
+        .step.active { display: block; }
+
+        /* Step dots */
+        .step-bar {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0;
+            margin: 14px 0 18px;
+        }
+        .step-bar .dot {
+            width: 28px; height: 28px; border-radius: 50%;
+            background: #ddd; color: #999; font-size: .75rem; font-weight: 700;
+            display: flex; align-items: center; justify-content: center;
+            transition: background .3s, color .3s;
+        }
+        .step-bar .dot.active { background: var(--red); color: #fff; }
+        .step-bar .dot.done { background: var(--blue); color: #fff; }
+        .step-bar .line {
+            flex: 1; height: 3px; background: #ddd; max-width: 60px;
+            transition: background .3s;
+        }
+        .step-bar .line.done { background: var(--blue); }
+
+        /* Cards */
+        .card {
+            background: #fff;
+            border-radius: 10px;
+            padding: 18px;
+            margin-bottom: 14px;
+            box-shadow: 0 1px 4px rgba(0,0,0,.08);
+        }
+        .card h2 { color: var(--blue); font-size: 1rem; margin-bottom: 12px; }
+        .card h3 { font-size: .9rem; margin-bottom: 8px; }
+
+        /* Buttons */
+        .btn {
+            display: block; width: 100%; padding: 13px 16px;
+            border: none; border-radius: 8px; font-size: .95rem;
+            font-weight: 700; cursor: pointer; margin-bottom: 8px;
+            text-align: center; text-decoration: none;
+            transition: opacity .2s, transform .1s;
+        }
+        .btn:active { transform: scale(.98); }
+        .btn-red { background: var(--red); color: #fff; }
+        .btn-blue { background: var(--blue); color: #fff; }
+        .btn-gray { background: #6c757d; color: #fff; }
+        .btn-green { background: #1a7a3c; color: #fff; }
+        .btn:disabled { opacity: .5; cursor: not-allowed; }
+
+        /* Form controls */
+        .form-group { margin-bottom: 11px; }
+        label {
+            display: block; font-size: .78rem; font-weight: 600;
+            color: #555; margin-bottom: 3px; text-transform: uppercase; letter-spacing: .3px;
+        }
+        input[type="text"], input[type="email"], input[type="password"],
+        input[type="tel"], input[type="number"], input[type="date"],
+        select, textarea {
+            width: 100%; padding: 9px 11px;
+            border: 1px solid var(--border); border-radius: 6px;
+            font-size: .9rem; background: #fff; color: #222;
+            transition: border-color .2s;
+        }
+        input:focus, select:focus, textarea:focus {
+            outline: none; border-color: var(--blue);
+            box-shadow: 0 0 0 2px rgba(9,79,130,.15);
+        }
+        textarea { resize: vertical; }
+
+        /* Section headers inside form */
+        .section-head {
+            background: var(--blue); color: #fff;
+            padding: 7px 14px; margin: 16px -18px 12px;
+            font-size: .78rem; font-weight: 700; letter-spacing: .5px;
+            text-transform: uppercase;
+        }
+
+        /* IBAN row */
+        .iban-row { display: flex; gap: 5px; align-items: flex-end; flex-wrap: wrap; }
+        .iban-row .fg { flex: 1; min-width: 50px; }
+        .iban-sep { padding-bottom: 10px; color: #888; font-weight: 700; }
+
+        /* Preview image */
+        .preview-wrap {
+            position: relative; margin-bottom: 12px;
+        }
+        .preview-wrap img {
+            width: 100%; border-radius: 8px; display: block;
+            max-height: 280px; object-fit: cover;
+        }
+        .preview-wrap .retake-btn {
+            position: absolute; top: 8px; right: 8px;
+            background: rgba(0,0,0,.55); color: #fff;
+            border: none; border-radius: 6px; padding: 6px 10px;
+            font-size: .8rem; cursor: pointer;
+        }
+
+        /* Loading */
+        .loading-wrap { text-align: center; padding: 40px 20px; }
+        .spinner {
+            width: 48px; height: 48px; margin: 0 auto 16px;
+            border: 4px solid #e0e0e0; border-top-color: var(--red);
+            border-radius: 50%; animation: spin .9s linear infinite;
+        }
+        @keyframes spin { to { transform: rotate(360deg); } }
+
+        /* Alert boxes */
+        .alert {
+            border-radius: 8px; padding: 12px 14px;
+            font-size: .85rem; margin-bottom: 12px; line-height: 1.5;
+        }
+        .alert-info { background: #dbeafe; border: 1px solid #93c5fd; color: #1e3a5f; }
+        .alert-warn { background: #fef9c3; border: 1px solid #fcd34d; color: #78350f; }
+        .alert-ok   { background: #d1fae5; border: 1px solid #6ee7b7; color: #065f46; }
+
+        /* Bookmarklet */
+        .bm-link {
+            display: inline-block; background: var(--blue); color: #fff !important;
+            padding: 10px 18px; border-radius: 8px; font-weight: 700;
+            font-size: .9rem; text-decoration: none; cursor: grab;
+            border: 2px dashed rgba(255,255,255,.5);
+            user-select: none;
+        }
+        .bm-link:hover { opacity: .9; }
+
+        /* Radio group */
+        .radio-group { display: flex; flex-wrap: wrap; gap: 8px; }
+        .radio-group label {
+            display: flex; align-items: center; gap: 5px;
+            background: #f0f4f8; border: 1px solid var(--border);
+            border-radius: 6px; padding: 7px 12px; cursor: pointer;
+            font-size: .82rem; text-transform: none; letter-spacing: 0;
+            font-weight: 500; color: #333;
+        }
+        .radio-group input[type="radio"] { width: auto; margin: 0; }
+        .radio-group input[type="radio"]:checked + span {
+            color: var(--blue); font-weight: 700;
+        }
+
+        small { color: #888; font-size: .75rem; }
+
+        #api-key-status { font-size: .8rem; margin-top: 4px; display: block; }
+    </style>
+</head>
+<body>
+
+<header>
+    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+        <rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/>
+    </svg>
+    <h1>Scanner Formularios F2F</h1>
+</header>
+
+<div class="container">
+    <div class="step-bar" id="step-bar">
+        <div class="dot active" id="dot-1">1</div>
+        <div class="line" id="line-1"></div>
+        <div class="dot" id="dot-2">2</div>
+        <div class="line" id="line-2"></div>
+        <div class="dot" id="dot-3">3</div>
+    </div>
+
+    <!-- ========== STEP 1: Config + Capture ========== -->
+    <div id="step-1" class="step active">
+
+        <div class="card" id="config-card">
+            <h2>⚙️ API Key de Anthropic</h2>
+            <p style="font-size:.85rem;color:#666;margin-bottom:10px;">
+                Necesaria para analizar las fotos con IA. Se guarda solo en este navegador.
+            </p>
+            <div class="form-group">
+                <label>API Key</label>
+                <input type="password" id="api-key-input" placeholder="sk-ant-api03-...">
+            </div>
+            <button class="btn btn-blue" onclick="saveApiKey()">Guardar API Key</button>
+            <span id="api-key-status"></span>
+        </div>
+
+        <div class="card">
+            <h2>📷 Fotografiar el Formulario</h2>
+            <p style="font-size:.85rem;color:#666;margin-bottom:14px;">
+                Haz una foto clara al formulario en papel rellenado.
+                Asegúrate de que toda la letra sea legible.
+            </p>
+
+            <input type="file" id="photo-input" accept="image/*" capture="environment"
+                   style="display:none" onchange="handlePhotoCapture(event)">
+
+            <button class="btn btn-red" id="capture-btn"
+                    onclick="document.getElementById('photo-input').click()">
+                📷 Hacer Foto
+            </button>
+            <button class="btn btn-gray" style="margin-top:2px"
+                    onclick="document.getElementById('photo-input').click()">
+                🖼️ Elegir de la Galería
+            </button>
+
+            <div id="photo-preview" style="display:none; margin-top:14px;">
+                <div class="preview-wrap">
+                    <img id="preview-img" alt="Vista previa">
+                    <button class="retake-btn" onclick="retakePhoto()">🔄 Repetir</button>
+                </div>
+                <button class="btn btn-green" onclick="processPhoto()">
+                    🔍 Extraer Datos con IA
+                </button>
+            </div>
+        </div>
+
+        <div class="card" style="border: 2px solid #fcd34d;">
+            <h2>🔖 Marcador de Relleno Automático</h2>
+            <div class="alert alert-warn" style="margin-bottom:10px;">
+                <strong>Instalación única:</strong> Arrastra el botón de abajo a tu <strong>barra de marcadores</strong>
+                del navegador. Solo tienes que hacerlo una vez.
+            </div>
+            <div style="text-align:center; margin: 14px 0;">
+                <a id="bookmarklet-link" href="#" class="bm-link"
+                   title="Arrastra a tu barra de marcadores">
+                    🚀 Rellenar Formulario F2F
+                </a>
+            </div>
+            <p style="font-size:.8rem;color:#666;line-height:1.5;">
+                Después de revisar los datos en el Paso 3, el formulario digital se abrirá en
+                una nueva pestaña. Haz clic en este marcador desde esa pestaña para rellenar
+                automáticamente todos los campos.
+            </p>
+        </div>
+
+    </div>
+
+    <!-- ========== STEP 2: Processing ========== -->
+    <div id="step-2" class="step">
+        <div class="card">
+            <div class="loading-wrap">
+                <div class="spinner"></div>
+                <h3>Analizando el formulario...</h3>
+                <p style="color:#666;font-size:.85rem;margin-top:8px;">
+                    La IA está leyendo los datos del papel. Esto puede tardar unos segundos.
+                </p>
+            </div>
+        </div>
+    </div>
+
+    <!-- ========== STEP 3: Review & Edit ========== -->
+    <div id="step-3" class="step">
+        <div class="card">
+            <h2>✅ Revisar y Corregir Datos</h2>
+            <p style="font-size:.82rem;color:#666;margin-bottom:6px;">
+                Revisa los campos extraídos y corrige cualquier error antes de abrir el formulario digital.
+            </p>
+
+            <!-- PERSONAL -->
+            <div class="section-head">Datos del Colaborador</div>
+
+            <div class="form-group">
+                <label>Nombre</label>
+                <input type="text" id="f-nombre" placeholder="Nombre">
+            </div>
+            <div class="form-group">
+                <label>Apellido 1</label>
+                <input type="text" id="f-apellido1">
+            </div>
+            <div class="form-group">
+                <label>Apellido 2</label>
+                <input type="text" id="f-apellido2">
+            </div>
+            <div class="form-group">
+                <label>NIF / CIF / NIE</label>
+                <input type="text" id="f-nif" placeholder="12345678A">
+            </div>
+            <div class="form-group">
+                <label>Fecha de Nacimiento</label>
+                <input type="text" id="f-numdir" placeholder="DD/MM/YYYY" maxlength="10">
+            </div>
+
+            <!-- CONTACT -->
+            <div class="section-head">Contacto</div>
+
+            <div class="form-group">
+                <label>Teléfono particular</label>
+                <input type="tel" id="f-tlf1">
+            </div>
+            <div class="form-group">
+                <label>Teléfono trabajo</label>
+                <input type="tel" id="f-tlf2">
+            </div>
+            <div class="form-group">
+                <label>Móvil 1</label>
+                <input type="tel" id="f-movil1">
+            </div>
+            <div class="form-group">
+                <label>Móvil 2</label>
+                <input type="tel" id="f-movil2">
+            </div>
+            <div class="form-group">
+                <label>Email</label>
+                <input type="email" id="f-email" placeholder="correo@ejemplo.com">
+            </div>
+
+            <!-- ADDRESS -->
+            <div class="section-head">Domicilio</div>
+
+            <div class="form-group">
+                <label>Tipo de vía</label>
+                <select id="f-tipovia">
+                    <option value="Cl">Calle</option>
+                    <option value="Av">Avenida</option>
+                    <option value="Ps">Paseo</option>
+                    <option value="Pz">Plaza</option>
+                    <option value="Cm">Camino</option>
+                    <option value="Cr">Carretera</option>
+                    <option value="Gl">Glorieta</option>
+                    <option value="Rb">Rambla</option>
+                    <option value="Arr">Arroyo</option>
+                    <option value="Bo">Barrio</option>
+                    <option value="Cj">Callejón</option>
+                    <option value="Ct">Cuesta</option>
+                    <option value="Int">Interior</option>
+                    <option value="Lg">Lugar</option>
+                    <option value="Pq">Parque</option>
+                    <option value="Pj">Pasaje</option>
+                    <option value="Rd">Ronda</option>
+                    <option value="Tr">Travesía</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label>Nombre de la vía</label>
+                <input type="text" id="f-dirvia" placeholder="Gran Vía...">
+            </div>
+            <div class="form-group">
+                <label>Número</label>
+                <input type="text" id="f-numvia" placeholder="12">
+            </div>
+            <div class="form-group">
+                <label>Piso</label>
+                <input type="text" id="f-pisovia" placeholder="3º">
+            </div>
+            <div class="form-group">
+                <label>Puerta</label>
+                <input type="text" id="f-letravia" placeholder="A">
+            </div>
+            <div class="form-group">
+                <label>Letra / Complemento</label>
+                <input type="text" id="f-comp15">
+            </div>
+            <div class="form-group">
+                <label>Código Postal</label>
+                <input type="text" id="f-cp" placeholder="28001" maxlength="5">
+            </div>
+            <div class="form-group">
+                <label>Población</label>
+                <input type="text" id="f-dirvia2" placeholder="Madrid">
+            </div>
+            <div class="form-group">
+                <label>Provincia</label>
+                <select id="f-portalvia2b">
+                    <option value="0">Selecciona la provincia...</option>
+                    <option value="DESCONOCIDA">DESCONOCIDA</option>
+                    <option value="EXTRANJERA">EXTRANJERA</option>
+                    <option value="A Coruña">A Coruña</option>
+                    <option value="Alava">Alava</option>
+                    <option value="Albacete">Albacete</option>
+                    <option value="Alicante">Alicante</option>
+                    <option value="Almeria">Almeria</option>
+                    <option value="Asturias">Asturias</option>
+                    <option value="Avila">Avila</option>
+                    <option value="Badajoz">Badajoz</option>
+                    <option value="Baleares">Baleares</option>
+                    <option value="Barcelona">Barcelona</option>
+                    <option value="Burgos">Burgos</option>
+                    <option value="Caceres">Caceres</option>
+                    <option value="Cadiz">Cadiz</option>
+                    <option value="Cantabria">Cantabria</option>
+                    <option value="Castellon De La Plana">Castellon De La Plana</option>
+                    <option value="Ceuta">Ceuta</option>
+                    <option value="Ciudad Real">Ciudad Real</option>
+                    <option value="Cordoba">Cordoba</option>
+                    <option value="Cuenca">Cuenca</option>
+                    <option value="Girona">Girona</option>
+                    <option value="Granada">Granada</option>
+                    <option value="Guadalajara">Guadalajara</option>
+                    <option value="Guipuzcoa">Guipuzcoa</option>
+                    <option value="Huelva">Huelva</option>
+                    <option value="Huesca">Huesca</option>
+                    <option value="Jaen">Jaen</option>
+                    <option value="La Rioja">La Rioja</option>
+                    <option value="Las Palmas de Gran Canaria">Las Palmas de Gran Canaria</option>
+                    <option value="Leon">Leon</option>
+                    <option value="Lleida">Lleida</option>
+                    <option value="Lugo">Lugo</option>
+                    <option value="Madrid">Madrid</option>
+                    <option value="Malaga">Malaga</option>
+                    <option value="Melilla">Melilla</option>
+                    <option value="Murcia">Murcia</option>
+                    <option value="Navarra">Navarra</option>
+                    <option value="Orense">Orense</option>
+                    <option value="Palencia">Palencia</option>
+                    <option value="Pontevedra">Pontevedra</option>
+                    <option value="Salamanca">Salamanca</option>
+                    <option value="Santa Cruz De Tenerife">Santa Cruz De Tenerife</option>
+                    <option value="Segovia">Segovia</option>
+                    <option value="Sevilla">Sevilla</option>
+                    <option value="Soria">Soria</option>
+                    <option value="Tarragona">Tarragona</option>
+                    <option value="Teruel">Teruel</option>
+                    <option value="Toledo">Toledo</option>
+                    <option value="Valencia">Valencia</option>
+                    <option value="Valladolid">Valladolid</option>
+                    <option value="Vizcaya">Vizcaya</option>
+                    <option value="Zamora">Zamora</option>
+                    <option value="Zaragoza">Zaragoza</option>
+                </select>
+            </div>
+
+            <!-- BANK -->
+            <div class="section-head">Datos Bancarios</div>
+
+            <div class="form-group">
+                <label>IBAN completo (se divide automáticamente)</label>
+                <input type="text" id="f-iban-full" placeholder="ES12 1234 5678 12 1234567890"
+                       oninput="splitIBAN(this.value)">
+            </div>
+            <div class="iban-row">
+                <div class="fg">
+                    <label>Prefijo</label>
+                    <input type="text" id="f-iban2" placeholder="ES12" maxlength="4">
+                </div>
+                <span class="iban-sep">-</span>
+                <div class="fg">
+                    <label>Banco</label>
+                    <input type="text" id="f-cb2" placeholder="0000" maxlength="4">
+                </div>
+                <span class="iban-sep">-</span>
+                <div class="fg">
+                    <label>Sucursal</label>
+                    <input type="text" id="f-cs2" placeholder="0000" maxlength="4">
+                </div>
+                <span class="iban-sep">-</span>
+                <div class="fg" style="max-width:70px;">
+                    <label>DC</label>
+                    <input type="text" id="f-dc2" placeholder="00" maxlength="2">
+                </div>
+                <span class="iban-sep">-</span>
+                <div class="fg" style="min-width:110px;">
+                    <label>Nº Cuenta</label>
+                    <input type="text" id="f-nc2" placeholder="0000000000" maxlength="10">
+                </div>
+            </div>
+
+            <!-- CONTRACT -->
+            <div class="section-head">Datos del Contrato</div>
+
+            <div class="form-group">
+                <label>Aportación periódica</label>
+                <select id="f-producto">
+                    <option value="0">Sin importe seleccionado</option>
+                    <option value="325">Donación 6 €</option>
+                    <option value="326">Donación 10 €</option>
+                    <option value="327">Donación 12 €</option>
+                    <option value="328">Donación 15 €</option>
+                    <option value="329">Donación 20 €</option>
+                    <option value="330">Donación 25 €</option>
+                    <option value="331">Donación 30 €</option>
+                    <option value="332">Otras</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label>Otro importe (si "Otras")</label>
+                <input type="number" id="f-distribuidora1" placeholder="Importe en €" min="1">
+            </div>
+            <div class="form-group">
+                <label>Día de cargo</label>
+                <select id="f-tarifa">
+                    <option value="">Por defecto (día 1)</option>
+                    <option value="01">Día 1 de mes</option>
+                    <option value="10">Día 10 de mes</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label>Fecha primer cobro</label>
+                <input type="date" id="f-fecha_primercobro">
+            </div>
+            <div class="form-group">
+                <label>Método de captación</label>
+                <select id="f-comp10">
+                    <option value="0">Selecciona...</option>
+                    <option value="1">D2D</option>
+                    <option value="2">PYMES</option>
+                    <option value="3">F2F</option>
+                    <option value="4">ADIF</option>
+                    <option value="5">C. COMERCIALES</option>
+                    <option value="6">EVENTO</option>
+                    <option value="7">AENA</option>
+                    <option value="8">HOSPITALES</option>
+                    <option value="9">METRO</option>
+                    <option value="10">TIENDAS</option>
+                    <option value="11">FORMACIÓN EMPRESAS</option>
+                    <option value="12">CENTRO EDUCATIVO</option>
+                    <option value="13">CENTRO AT. PRIMARIA</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label>Tipo de socio</label>
+                <select id="f-cupsE">
+                    <option value="">Selecciona...</option>
+                    <option value="SOCIO">Socio</option>
+                    <option value="AUMENTO DE CUOTA">Aumento de cuota</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label>Período de aportación</label>
+                <div class="radio-group">
+                    <label><input type="radio" name="r-api" value="0" checked><span>Mensual</span></label>
+                    <label><input type="radio" name="r-api" value="1"><span>Trimestral</span></label>
+                    <label><input type="radio" name="r-api" value="2"><span>Semestral</span></label>
+                    <label><input type="radio" name="r-api" value="3"><span>Anual</span></label>
+                    <label><input type="radio" name="r-api" value="4"><span>Puntual</span></label>
+                </div>
+            </div>
+            <div class="form-group">
+                <label>Sexo</label>
+                <select id="f-sppgas">
+                    <option value="0">No especificado</option>
+                    <option value="1">Hombre</option>
+                    <option value="2">Mujer</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label>Observaciones</label>
+                <textarea id="f-observaciones" rows="3" maxlength="250"
+                          placeholder="Observaciones adicionales..."></textarea>
+            </div>
+
+            <button class="btn btn-red" onclick="openTargetForm()" style="margin-top:8px;">
+                🚀 Abrir Formulario Digital en Nueva Pestaña
+            </button>
+            <button class="btn btn-gray" onclick="goTo(1)">← Volver a Escanear</button>
+        </div>
+
+        <div class="card" id="after-open-msg" style="display:none;">
+            <div class="alert alert-ok">
+                <strong>✅ Formulario abierto en nueva pestaña.</strong><br>
+                Ahora haz clic en el marcador <strong>"Rellenar Formulario F2F"</strong>
+                en tu barra de marcadores para rellenar los datos automáticamente.
+            </div>
+            <p style="font-size:.82rem;color:#666;margin-top:8px;">
+                Si aún no tienes el marcador instalado, vuelve al Paso 1 y arrástralo
+                a tu barra de marcadores.
+            </p>
+        </div>
+    </div>
+
+</div><!-- /container -->
+
+<script>
+// ─── State ──────────────────────────────────────────────────────────────────
+var capturedDataUrl = null;
+
+// ─── Init ────────────────────────────────────────────────────────────────────
+(function init() {
+    buildBookmarklet();
+    var key = localStorage.getItem('anthropic_api_key');
+    if (key) {
+        document.getElementById('api-key-input').value = key;
+        setApiStatus('✅ API Key cargada', 'green');
+    }
+})();
+
+// ─── Navigation ──────────────────────────────────────────────────────────────
+function goTo(n) {
+    document.querySelectorAll('.step').forEach(function(el) { el.classList.remove('active'); });
+    document.getElementById('step-' + n).classList.add('active');
+
+    [1,2,3].forEach(function(i) {
+        var dot = document.getElementById('dot-' + i);
+        dot.classList.remove('active', 'done');
+        if (i < n) dot.classList.add('done');
+        else if (i === n) dot.classList.add('active');
+        if (i < 3) {
+            var line = document.getElementById('line-' + i);
+            line.classList.toggle('done', i < n);
+        }
+    });
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+// ─── API Key ──────────────────────────────────────────────────────────────────
+function saveApiKey() {
+    var key = document.getElementById('api-key-input').value.trim();
+    if (!key.startsWith('sk-ant')) {
+        alert('La API key debe empezar por sk-ant-...');
+        return;
+    }
+    localStorage.setItem('anthropic_api_key', key);
+    setApiStatus('✅ API Key guardada correctamente', 'green');
+}
+
+function setApiStatus(msg, color) {
+    var el = document.getElementById('api-key-status');
+    el.textContent = msg;
+    el.style.color = color;
+}
+
+// ─── Photo Capture ────────────────────────────────────────────────────────────
+function handlePhotoCapture(event) {
+    var file = event.target.files[0];
+    if (!file) return;
+    var reader = new FileReader();
+    reader.onload = function(e) {
+        capturedDataUrl = e.target.result;
+        document.getElementById('preview-img').src = capturedDataUrl;
+        document.getElementById('photo-preview').style.display = 'block';
+    };
+    reader.readAsDataURL(file);
+}
+
+function retakePhoto() {
+    capturedDataUrl = null;
+    document.getElementById('photo-preview').style.display = 'none';
+    document.getElementById('photo-input').value = '';
+}
+
+// ─── Image Compression ───────────────────────────────────────────────────────
+function compressImage(dataUrl) {
+    return new Promise(function(resolve) {
+        var img = new Image();
+        img.onload = function() {
+            var maxDim = 1800;
+            var scale = Math.min(1, maxDim / Math.max(img.width, img.height));
+            var w = Math.round(img.width * scale);
+            var h = Math.round(img.height * scale);
+            var canvas = document.createElement('canvas');
+            canvas.width = w;
+            canvas.height = h;
+            var ctx = canvas.getContext('2d');
+            ctx.drawImage(img, 0, 0, w, h);
+            var quality = 0.82;
+            var result = canvas.toDataURL('image/jpeg', quality);
+            // Reduce further if still >4 MB base64
+            while (result.length > 5500000 && quality > 0.35) {
+                quality -= 0.1;
+                result = canvas.toDataURL('image/jpeg', quality);
+            }
+            resolve(result);
+        };
+        img.src = dataUrl;
+    });
+}
+
+// ─── Process Photo ────────────────────────────────────────────────────────────
+async function processPhoto() {
+    var apiKey = localStorage.getItem('anthropic_api_key');
+    if (!apiKey) {
+        alert('Introduce y guarda tu API Key de Anthropic primero (arriba).');
+        return;
+    }
+    if (!capturedDataUrl) {
+        alert('Primero haz una foto.');
+        return;
+    }
+
+    goTo(2);
+
+    try {
+        var compressed = await compressImage(capturedDataUrl);
+        var base64 = compressed.split(',')[1];
+        var data = await callClaudeAPI(base64, apiKey);
+        fillForm(data);
+        goTo(3);
+    } catch (err) {
+        goTo(1);
+        alert('Error al procesar: ' + err.message);
+    }
+}
+
+// ─── Claude API Call ──────────────────────────────────────────────────────────
+async function callClaudeAPI(base64, apiKey) {
+    var prompt = [
+        'Analiza esta imagen de un formulario de donación/captación en papel.',
+        'Extrae todos los datos legibles y devuelve ÚNICAMENTE un objeto JSON (sin markdown, sin texto extra) con exactamente estos campos:',
+        '{',
+        '  "nombre": "",',
+        '  "apellido1": "",',
+        '  "apellido2": "",',
+        '  "nif": "",',
+        '  "numdir": "",',
+        '  "tlf1": "",',
+        '  "tlf2": "",',
+        '  "movil1": "",',
+        '  "movil2": "",',
+        '  "email": "",',
+        '  "tipovia": "",',
+        '  "dirvia": "",',
+        '  "numvia": "",',
+        '  "pisovia": "",',
+        '  "letravia": "",',
+        '  "comp15": "",',
+        '  "cp": "",',
+        '  "dirvia2": "",',
+        '  "portalvia2b": "",',
+        '  "iban_completo": "",',
+        '  "importe": "",',
+        '  "dia_cargo": "",',
+        '  "periodo": "",',
+        '  "sexo": "",',
+        '  "observaciones": ""',
+        '}',
+        '',
+        'Reglas:',
+        '- tipovia: usa códigos Cl (calle), Av (avenida), Ps (paseo), Pz (plaza), Cm (camino), Cr (carretera), Gl (glorieta), Rb (rambla), Tr (travesía), Pj (pasaje)',
+        '- numdir: fecha nacimiento en formato DD/MM/YYYY',
+        '- iban_completo: el IBAN completo si es visible (ej: ES12 1234 5678 12 1234567890)',
+        '- importe: solo el número en euros (ej: "10", "15", "20")',
+        '- dia_cargo: "01" o "10"',
+        '- periodo: "0"=mensual, "1"=trimestral, "2"=semestral, "3"=anual, "4"=puntual',
+        '- sexo: "1"=hombre, "2"=mujer',
+        '- portalvia2b: nombre de provincia exacto en español (ej: "Madrid", "Barcelona", "Valencia")',
+        '- Si un campo no es visible o legible, deja la cadena vacía ""',
+        '- Devuelve SOLO el JSON, sin explicaciones.'
+    ].join('\n');
+
+    var response = await fetch('https://api.anthropic.com/v1/messages', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'x-api-key': apiKey,
+            'anthropic-version': '2023-06-01',
+            'anthropic-dangerous-allow-browser': 'true'
+        },
+        body: JSON.stringify({
+            model: 'claude-haiku-4-5-20251001',
+            max_tokens: 1024,
+            messages: [{
+                role: 'user',
+                content: [
+                    {
+                        type: 'image',
+                        source: { type: 'base64', media_type: 'image/jpeg', data: base64 }
+                    },
+                    { type: 'text', text: prompt }
+                ]
+            }]
+        })
+    });
+
+    if (!response.ok) {
+        var err = await response.json().catch(function() { return {}; });
+        throw new Error((err.error && err.error.message) || ('HTTP ' + response.status));
+    }
+
+    var result = await response.json();
+    var text = result.content[0].text.trim();
+    // Strip possible markdown fences
+    text = text.replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/, '').trim();
+    return JSON.parse(text);
+}
+
+// ─── Fill Review Form ─────────────────────────────────────────────────────────
+var IMPORTE_MAP = { '6':'325','10':'326','12':'327','15':'328','20':'329','25':'330','30':'331' };
+
+function fillForm(d) {
+    function sv(id, val) {
+        if (!val && val !== 0) return;
+        var el = document.getElementById(id);
+        if (el) el.value = String(val);
+    }
+    sv('f-nombre',      d.nombre);
+    sv('f-apellido1',   d.apellido1);
+    sv('f-apellido2',   d.apellido2);
+    sv('f-nif',         d.nif);
+    sv('f-numdir',      d.numdir);
+    sv('f-tlf1',        d.tlf1);
+    sv('f-tlf2',        d.tlf2);
+    sv('f-movil1',      d.movil1);
+    sv('f-movil2',      d.movil2);
+    sv('f-email',       d.email);
+    sv('f-tipovia',     d.tipovia);
+    sv('f-dirvia',      d.dirvia);
+    sv('f-numvia',      d.numvia);
+    sv('f-pisovia',     d.pisovia);
+    sv('f-letravia',    d.letravia);
+    sv('f-comp15',      d.comp15);
+    sv('f-cp',          d.cp);
+    sv('f-dirvia2',     d.dirvia2);
+    sv('f-portalvia2b', d.portalvia2b);
+    sv('f-observaciones', d.observaciones);
+
+    if (d.iban_completo) {
+        sv('f-iban-full', d.iban_completo);
+        splitIBAN(d.iban_completo);
+    }
+
+    if (d.importe) {
+        var prod = IMPORTE_MAP[String(d.importe).trim()] || '332';
+        sv('f-producto', prod);
+        if (prod === '332') sv('f-distribuidora1', d.importe);
+    }
+
+    if (d.dia_cargo) sv('f-tarifa', d.dia_cargo);
+    if (d.sexo)      sv('f-sppgas', d.sexo);
+
+    if (d.periodo) {
+        document.querySelectorAll('[name="r-api"]').forEach(function(r) {
+            r.checked = (r.value === String(d.periodo));
+        });
+    }
+}
+
+// ─── IBAN Split ───────────────────────────────────────────────────────────────
+function splitIBAN(raw) {
+    var c = raw.replace(/[\s\-]/g, '').toUpperCase();
+    function setv(id, val) { var e = document.getElementById(id); if (e) e.value = val; }
+    setv('f-iban2', c.slice(0, 4));
+    setv('f-cb2',   c.slice(4, 8));
+    setv('f-cs2',   c.slice(8, 12));
+    setv('f-dc2',   c.slice(12, 14));
+    setv('f-nc2',   c.slice(14, 24));
+}
+
+// ─── Collect Form Data ────────────────────────────────────────────────────────
+function collectData() {
+    function gv(id) { var e = document.getElementById(id); return e ? e.value : ''; }
+    var api = '0';
+    document.querySelectorAll('[name="r-api"]').forEach(function(r) {
+        if (r.checked) api = r.value;
+    });
+    return {
+        nombre:             gv('f-nombre'),
+        apellido1:          gv('f-apellido1'),
+        apellido2:          gv('f-apellido2'),
+        nif:                gv('f-nif'),
+        numdir:             gv('f-numdir'),
+        tlf1:               gv('f-tlf1'),
+        tlf2:               gv('f-tlf2'),
+        movil1:             gv('f-movil1'),
+        movil2:             gv('f-movil2'),
+        email:              gv('f-email'),
+        tipovia:            gv('f-tipovia'),
+        dirvia:             gv('f-dirvia'),
+        numvia:             gv('f-numvia'),
+        pisovia:            gv('f-pisovia'),
+        letravia:           gv('f-letravia'),
+        comp15:             gv('f-comp15'),
+        cp:                 gv('f-cp'),
+        dirvia2:            gv('f-dirvia2'),
+        portalvia2b:        gv('f-portalvia2b'),
+        IBAN2:              gv('f-iban2'),
+        CB2:                gv('f-cb2'),
+        CS2:                gv('f-cs2'),
+        DC2:                gv('f-dc2'),
+        NC2:                gv('f-nc2'),
+        producto:           gv('f-producto'),
+        distribuidora1:     gv('f-distribuidora1'),
+        tarifa:             gv('f-tarifa'),
+        fecha_primercobro:  gv('f-fecha_primercobro'),
+        comp10:             gv('f-comp10'),
+        cupsE:              gv('f-cupsE'),
+        sppgas:             gv('f-sppgas'),
+        api:                api,
+        observaciones_llamada: gv('f-observaciones')
+    };
+}
+
+// ─── Open Target Form ─────────────────────────────────────────────────────────
+function openTargetForm() {
+    var data = collectData();
+    // Encode as base64 (safe for non-ASCII via encodeURIComponent)
+    var json = JSON.stringify(data);
+    var encoded = btoa(unescape(encodeURIComponent(json)));
+    var url = 'https://comercial.topf2f.com/cc_fichasnew.php#f2f=' + encoded;
+    window.open(url, '_blank');
+    var msg = document.getElementById('after-open-msg');
+    msg.style.display = 'block';
+    msg.scrollIntoView({ behavior: 'smooth' });
+}
+
+// ─── Bookmarklet Builder ──────────────────────────────────────────────────────
+function buildBookmarklet() {
+    // Compact bookmarklet code — reads #f2f= from URL hash and fills the form
+    var code = '(function(){' +
+        'var h=location.hash,m=h.match(/#f2f=([A-Za-z0-9+/=]+)/);' +
+        'if(!m){alert("Sin datos. Escanea el formulario primero.");return;}' +
+        'try{' +
+            'var d=JSON.parse(decodeURIComponent(escape(atob(m[1]))));' +
+            'var s=function(n,v){if(v===undefined||v===null||v==="")return;' +
+                'var e=document.querySelector("[name=\\""+n+"\\"]");if(e)e.value=v;};' +
+            's("nombre",d.nombre);' +
+            's("apellido1",d.apellido1);' +
+            's("apellido2",d.apellido2);' +
+            's("nif",d.nif);' +
+            's("numdir",d.numdir);' +
+            's("tlf1",d.tlf1);' +
+            's("tlf2",d.tlf2);' +
+            's("movil1",d.movil1);' +
+            's("movil2",d.movil2);' +
+            's("email",d.email);' +
+            's("tipovia",d.tipovia);' +
+            's("dirvia",d.dirvia);' +
+            's("numvia",d.numvia);' +
+            's("pisovia",d.pisovia);' +
+            's("letravia",d.letravia);' +
+            's("comp15",d.comp15);' +
+            's("cp",d.cp);' +
+            's("dirvia2",d.dirvia2);' +
+            's("portalvia2b",d.portalvia2b);' +
+            's("IBAN2",d.IBAN2);' +
+            's("CB2",d.CB2);' +
+            's("CS2",d.CS2);' +
+            's("DC2",d.DC2);' +
+            's("NC2",d.NC2);' +
+            's("producto",d.producto);' +
+            's("distribuidora1",d.distribuidora1);' +
+            's("tarifa",d.tarifa);' +
+            's("fecha_primercobro",d.fecha_primercobro);' +
+            's("comp10",d.comp10);' +
+            's("cupsE",d.cupsE);' +
+            's("sppgas",d.sppgas);' +
+            's("observaciones_llamada",d.observaciones_llamada);' +
+            'if(d.api!==undefined){' +
+                'document.querySelectorAll("[name=\\"API\\"]").forEach(function(r){r.checked=(r.value==d.api);});' +
+            '}' +
+            'alert("✓ Formulario rellenado con los datos escaneados.");' +
+        '}catch(ex){alert("Error al rellenar: "+ex.message);}' +
+    '})();';
+
+    document.getElementById('bookmarklet-link').href = 'javascript:' + code;
+}
+</script>
+
+</body>
+</html>
