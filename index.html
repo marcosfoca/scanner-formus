@@ -735,7 +735,7 @@ async function callGeminiAPI(base64, apiKey) {
                     { text: prompt }
                 ]
             }],
-            generationConfig: { temperature: 0.1, maxOutputTokens: 1024 }
+            generationConfig: { temperature: 0.1, maxOutputTokens: 2048 }
         })
     });
 
@@ -746,9 +746,10 @@ async function callGeminiAPI(base64, apiKey) {
 
     var result = await response.json();
     var text = result.candidates[0].content.parts[0].text.trim();
-    // Strip possible markdown fences
-    text = text.replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/, '').trim();
-    return JSON.parse(text);
+    // Extract JSON object even if wrapped in markdown or extra text
+    var match = text.match(/\{[\s\S]*\}/);
+    if (!match) throw new Error('La IA no devolvió un JSON válido');
+    return JSON.parse(match[0]);
 }
 
 // ─── Fill Review Form ─────────────────────────────────────────────────────────
