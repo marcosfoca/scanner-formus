@@ -202,13 +202,13 @@
     <div id="step-1" class="step active">
 
         <div class="card" id="config-card">
-            <h2>⚙️ API Key de Anthropic</h2>
+            <h2>⚙️ API Key de Google AI</h2>
             <p style="font-size:.85rem;color:#666;margin-bottom:10px;">
-                Necesaria para analizar las fotos con IA. Se guarda solo en este navegador.
+                Gratis en <strong>aistudio.google.com</strong> → "Get API key". Se guarda solo en este navegador.
             </p>
             <div class="form-group">
                 <label>API Key</label>
-                <input type="password" id="api-key-input" placeholder="sk-ant-api03-...">
+                <input type="password" id="api-key-input" placeholder="AIza...">
             </div>
             <button class="btn btn-blue" onclick="saveApiKey()">Guardar API Key</button>
             <span id="api-key-status"></span>
@@ -596,7 +596,7 @@ var capturedDataUrl = null;
 // ─── Init ────────────────────────────────────────────────────────────────────
 (function init() {
     buildBookmarklet();
-    var key = localStorage.getItem('anthropic_api_key');
+    var key = localStorage.getItem('google_api_key');
     if (key) {
         document.getElementById('api-key-input').value = key;
         setApiStatus('✅ API Key cargada', 'green');
@@ -624,11 +624,11 @@ function goTo(n) {
 // ─── API Key ──────────────────────────────────────────────────────────────────
 function saveApiKey() {
     var key = document.getElementById('api-key-input').value.trim();
-    if (!key.startsWith('sk-ant')) {
-        alert('La API key debe empezar por sk-ant-...');
+    if (!key.startsWith('AIza')) {
+        alert('La API key de Google debe empezar por AIza...');
         return;
     }
-    localStorage.setItem('anthropic_api_key', key);
+    localStorage.setItem('google_api_key', key);
     setApiStatus('✅ API Key guardada correctamente', 'green');
 }
 
@@ -686,9 +686,9 @@ function compressImage(dataUrl) {
 
 // ─── Process Photo ────────────────────────────────────────────────────────────
 async function processPhoto() {
-    var apiKey = localStorage.getItem('anthropic_api_key');
+    var apiKey = localStorage.getItem('google_api_key');
     if (!apiKey) {
-        alert('Introduce y guarda tu API Key de Anthropic primero (arriba).');
+        alert('Introduce y guarda tu API Key de Google AI primero (arriba).');
         return;
     }
     if (!capturedDataUrl) {
@@ -701,7 +701,7 @@ async function processPhoto() {
     try {
         var compressed = await compressImage(capturedDataUrl);
         var base64 = compressed.split(',')[1];
-        var data = await callClaudeAPI(base64, apiKey);
+        var data = await callGeminiAPI(base64, apiKey);
         fillForm(data);
         goTo(3);
     } catch (err) {
@@ -710,8 +710,8 @@ async function processPhoto() {
     }
 }
 
-// ─── Claude API Call ──────────────────────────────────────────────────────────
-async function callClaudeAPI(base64, apiKey) {
+// ─── Gemini API Call ──────────────────────────────────────────────────────────
+async function callGeminiAPI(base64, apiKey) {
     var prompt = [
         'Analiza esta imagen de un formulario de donación/captación en papel.',
         'Extrae todos los datos legibles y devuelve ÚNICAMENTE un objeto JSON (sin markdown, sin texto extra) con exactamente estos campos:',
@@ -756,27 +756,19 @@ async function callClaudeAPI(base64, apiKey) {
         '- Devuelve SOLO el JSON, sin explicaciones.'
     ].join('\n');
 
-    var response = await fetch('https://api.anthropic.com/v1/messages', {
+    var url = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=' + apiKey;
+
+    var response = await fetch(url, {
         method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-            'x-api-key': apiKey,
-            'anthropic-version': '2023-06-01',
-            'anthropic-dangerous-allow-browser': 'true'
-        },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-            model: 'claude-haiku-4-5-20251001',
-            max_tokens: 1024,
-            messages: [{
-                role: 'user',
-                content: [
-                    {
-                        type: 'image',
-                        source: { type: 'base64', media_type: 'image/jpeg', data: base64 }
-                    },
-                    { type: 'text', text: prompt }
+            contents: [{
+                parts: [
+                    { inline_data: { mime_type: 'image/jpeg', data: base64 } },
+                    { text: prompt }
                 ]
-            }]
+            }],
+            generationConfig: { temperature: 0.1, maxOutputTokens: 1024 }
         })
     });
 
@@ -786,7 +778,7 @@ async function callClaudeAPI(base64, apiKey) {
     }
 
     var result = await response.json();
-    var text = result.content[0].text.trim();
+    var text = result.candidates[0].content.parts[0].text.trim();
     // Strip possible markdown fences
     text = text.replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/, '').trim();
     return JSON.parse(text);
