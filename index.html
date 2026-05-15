@@ -201,18 +201,6 @@
     <!-- ========== STEP 1: Config + Capture ========== -->
     <div id="step-1" class="step active">
 
-        <div class="card" id="config-card">
-            <h2>⚙️ API Key de Google AI</h2>
-            <p style="font-size:.85rem;color:#666;margin-bottom:10px;">
-                Gratis en <strong>aistudio.google.com</strong> → "Get API key". Se guarda solo en este navegador.
-            </p>
-            <div class="form-group">
-                <label>API Key</label>
-                <input type="password" id="api-key-input" placeholder="AIza...">
-            </div>
-            <button class="btn btn-blue" onclick="saveApiKey()">Guardar API Key</button>
-            <span id="api-key-status"></span>
-        </div>
 
         <div class="card">
             <h2>📷 Fotografiar el Formulario</h2>
@@ -596,16 +584,10 @@
 var capturedDataUrl = null;
 
 // ─── Init ────────────────────────────────────────────────────────────────────
-var DEFAULT_API_KEY = 'AIzaSyDdWW5-nbqY39j5YjM3Uxpx114v1xSwKCQ';
+var GOOGLE_API_KEY = 'AIzaSyDdWW5-nbqY39j5YjM3Uxpx114v1xSwKCQ';
 
 (function init() {
     buildBookmarklet();
-    var key = localStorage.getItem('google_api_key') || DEFAULT_API_KEY;
-    if (!localStorage.getItem('google_api_key')) {
-        localStorage.setItem('google_api_key', DEFAULT_API_KEY);
-    }
-    document.getElementById('api-key-input').value = key;
-    setApiStatus('✅ API Key cargada', 'green');
 })();
 
 // ─── Navigation ──────────────────────────────────────────────────────────────
@@ -626,22 +608,6 @@ function goTo(n) {
     window.scrollTo({ top: 0, behavior: 'smooth' });
 }
 
-// ─── API Key ──────────────────────────────────────────────────────────────────
-function saveApiKey() {
-    var key = document.getElementById('api-key-input').value.trim();
-    if (!key.startsWith('AIza')) {
-        alert('La API key de Google debe empezar por AIza...');
-        return;
-    }
-    localStorage.setItem('google_api_key', key);
-    setApiStatus('✅ API Key guardada correctamente', 'green');
-}
-
-function setApiStatus(msg, color) {
-    var el = document.getElementById('api-key-status');
-    el.textContent = msg;
-    el.style.color = color;
-}
 
 // ─── Photo Capture ────────────────────────────────────────────────────────────
 function handlePhotoCapture(event) {
@@ -691,11 +657,7 @@ function compressImage(dataUrl) {
 
 // ─── Process Photo ────────────────────────────────────────────────────────────
 async function processPhoto() {
-    var apiKey = localStorage.getItem('google_api_key');
-    if (!apiKey) {
-        alert('Introduce y guarda tu API Key de Google AI primero (arriba).');
-        return;
-    }
+    var apiKey = GOOGLE_API_KEY;
     if (!capturedDataUrl) {
         alert('Primero haz una foto.');
         return;
