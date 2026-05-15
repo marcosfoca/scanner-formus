@@ -146,6 +146,70 @@
         }
         .btn-modal:active { opacity: .85; }
 
+        /* ── DONE ── */
+        #screen-done {
+            align-items: center;
+            justify-content: flex-start;
+            padding: 32px 24px;
+            gap: 20px;
+        }
+        #screen-done .done-header {
+            text-align: center;
+            width: 100%;
+        }
+        #screen-done .done-header .check {
+            font-size: 3rem;
+            margin-bottom: 8px;
+        }
+        #screen-done .done-header h2 {
+            font-size: 1.2rem;
+            color: var(--blue);
+            margin-bottom: 4px;
+        }
+        #screen-done .done-header p {
+            font-size: .85rem;
+            color: #666;
+        }
+        .steps-card {
+            background: #fff;
+            border-radius: 16px;
+            padding: 20px;
+            width: 100%;
+            max-width: 420px;
+            box-shadow: 0 2px 12px rgba(0,0,0,.08);
+        }
+        .step-list { list-style: none; }
+        .step-list li {
+            display: flex; gap: 14px; align-items: flex-start;
+            padding: 12px 0;
+            border-bottom: 1px solid #f0f0f0;
+            font-size: .9rem;
+            line-height: 1.5;
+        }
+        .step-list li:last-child { border-bottom: none; padding-bottom: 0; }
+        .snum {
+            background: var(--red); color: #fff; border-radius: 50%;
+            width: 26px; height: 26px; min-width: 26px;
+            display: flex; align-items: center; justify-content: center;
+            font-weight: 700; font-size: .78rem;
+            margin-top: 1px;
+        }
+        .btn-open {
+            display: block; width: 100%; max-width: 420px;
+            padding: 16px;
+            background: var(--red); color: #fff;
+            border: none; border-radius: 12px; font-size: 1rem;
+            font-weight: 700; cursor: pointer; text-align: center;
+            text-decoration: none;
+            box-shadow: 0 4px 14px rgba(204,0,0,.35);
+        }
+        .btn-open:active { opacity: .85; transform: scale(.98); }
+        .btn-scanagain {
+            background: none; border: none;
+            color: #999; font-size: .82rem;
+            cursor: pointer; text-decoration: underline;
+        }
+
         /* ── ERROR ── */
         #screen-err {
             align-items: center;
@@ -200,35 +264,47 @@
     <p>La IA está leyendo los datos del papel.</p>
 </div>
 
+<!-- ── DONE ── -->
+<div id="screen-done" class="screen">
+    <div class="done-header">
+        <div class="check">✅</div>
+        <h2>Datos extraídos</h2>
+        <p>Pulsa el botón para abrir el formulario</p>
+    </div>
+
+    <div class="steps-card">
+        <ul class="step-list">
+            <li>
+                <span class="snum">1</span>
+                <span>Pulsa <strong>"Abrir formulario"</strong> aquí abajo — se abrirá en una nueva pestaña.</span>
+            </li>
+            <li>
+                <span class="snum">2</span>
+                <span>En esa pestaña, haz clic en el marcador <strong>"🚀 Rellenar Formulario F2F"</strong> de tu barra de favoritos.</span>
+            </li>
+            <li>
+                <span class="snum">3</span>
+                <span>Los campos se rellenan solos. Revisa y envía.</span>
+            </li>
+        </ul>
+    </div>
+
+    <a id="btn-open-form" href="#" target="_blank" class="btn-open"
+       onclick="showScreen('land')">
+        🚀 Abrir formulario en topf2f.com
+    </a>
+
+    <button class="btn-scanagain" onclick="showScreen('land')">
+        ← Escanear otro formulario
+    </button>
+</div>
+
 <!-- ── ERROR ── -->
 <div id="screen-err" class="screen">
     <div class="err-icon">⚠️</div>
     <h2>No se pudo procesar</h2>
     <p id="err-msg"></p>
     <button class="btn-retry" onclick="showScreen('land')">Volver a intentarlo</button>
-</div>
-
-<!-- ── MODAL instrucciones ── -->
-<div class="modal-overlay" id="modal">
-    <div class="modal-box">
-        <h2>✅ Formulario abierto</h2>
-        <p class="subtitle">Sigue estos pasos para rellenar los datos:</p>
-        <ul class="step-list">
-            <li>
-                <span class="snum">1</span>
-                <span>Cambia a la <strong>nueva pestaña</strong> que se acaba de abrir.</span>
-            </li>
-            <li>
-                <span class="snum">2</span>
-                <span>Haz clic en el marcador <strong>"🚀 Rellenar Formulario F2F"</strong> de tu barra de favoritos.</span>
-            </li>
-            <li>
-                <span class="snum">3</span>
-                <span>Los campos se rellenarán solos. Revisa y envía.</span>
-            </li>
-        </ul>
-        <button class="btn-modal" onclick="closeModal()">Entendido ✓</button>
-    </div>
 </div>
 
 <script>
@@ -361,13 +437,9 @@ function buildFormData(d) {
 // ─── Open target form ─────────────────────────────────────────────────────────
 function openTargetForm(data) {
     var encoded = btoa(unescape(encodeURIComponent(JSON.stringify(data))));
-    window.open('https://comercial.topf2f.com/cc_fichasnew.php#f2f=' + encoded, '_blank');
-    showScreen('land');
-    document.getElementById('modal').classList.add('open');
-}
-
-function closeModal() {
-    document.getElementById('modal').classList.remove('open');
+    var url = 'https://comercial.topf2f.com/cc_fichasnew.php#f2f=' + encoded;
+    document.getElementById('btn-open-form').href = url;
+    showScreen('done');
 }
 
 // ─── Bookmarklet ──────────────────────────────────────────────────────────────
