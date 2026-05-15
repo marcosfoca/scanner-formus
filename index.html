@@ -636,8 +636,6 @@
 var capturedDataUrl = null;
 
 // ─── Init ────────────────────────────────────────────────────────────────────
-var GOOGLE_API_KEY = 'AIzaSyDdWW5-nbqY39j5YjM3Uxpx114v1xSwKCQ';
-
 (function init() {
     buildBookmarklet();
 })();
@@ -710,7 +708,6 @@ function compressImage(dataUrl) {
 
 // ─── Process Photo ────────────────────────────────────────────────────────────
 async function processPhoto() {
-    var apiKey = GOOGLE_API_KEY;
     if (!capturedDataUrl) {
         alert('Primero haz una foto.');
         return;
@@ -721,7 +718,7 @@ async function processPhoto() {
     try {
         var compressed = await compressImage(capturedDataUrl);
         var base64 = compressed.split(',')[1];
-        var data = await callGeminiAPI(base64, apiKey);
+        var data = await callAnalyzeAPI(base64);
         fillForm(data);
         goTo(3);
     } catch (err) {
@@ -730,66 +727,12 @@ async function processPhoto() {
     }
 }
 
-// ─── Gemini API Call ──────────────────────────────────────────────────────────
-async function callGeminiAPI(base64, apiKey) {
-    var prompt = [
-        'Analiza esta imagen de un formulario de donación/captación en papel.',
-        'Extrae todos los datos legibles y devuelve ÚNICAMENTE un objeto JSON (sin markdown, sin texto extra) con exactamente estos campos:',
-        '{',
-        '  "nombre": "",',
-        '  "apellido1": "",',
-        '  "apellido2": "",',
-        '  "nif": "",',
-        '  "numdir": "",',
-        '  "tlf1": "",',
-        '  "tlf2": "",',
-        '  "movil1": "",',
-        '  "movil2": "",',
-        '  "email": "",',
-        '  "tipovia": "",',
-        '  "dirvia": "",',
-        '  "numvia": "",',
-        '  "pisovia": "",',
-        '  "letravia": "",',
-        '  "comp15": "",',
-        '  "cp": "",',
-        '  "dirvia2": "",',
-        '  "portalvia2b": "",',
-        '  "iban_completo": "",',
-        '  "importe": "",',
-        '  "dia_cargo": "",',
-        '  "periodo": "",',
-        '  "sexo": "",',
-        '  "observaciones": ""',
-        '}',
-        '',
-        'Reglas:',
-        '- tipovia: usa códigos Cl (calle), Av (avenida), Ps (paseo), Pz (plaza), Cm (camino), Cr (carretera), Gl (glorieta), Rb (rambla), Tr (travesía), Pj (pasaje)',
-        '- numdir: fecha nacimiento en formato DD/MM/YYYY',
-        '- iban_completo: el IBAN completo si es visible (ej: ES12 1234 5678 12 1234567890)',
-        '- importe: solo el número en euros (ej: "10", "15", "20")',
-        '- dia_cargo: "01" o "10"',
-        '- periodo: "0"=mensual, "1"=trimestral, "2"=semestral, "3"=anual, "4"=puntual',
-        '- sexo: "1"=hombre, "2"=mujer',
-        '- portalvia2b: nombre de provincia exacto en español (ej: "Madrid", "Barcelona", "Valencia")',
-        '- Si un campo no es visible o legible, deja la cadena vacía ""',
-        '- Devuelve SOLO el JSON, sin explicaciones.'
-    ].join('\n');
-
-    var url = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=' + apiKey;
-
-    var response = await fetch(url, {
+// ─── API Call (via Vercel serverless — key stays on server) ──────────────────
+async function callAnalyzeAPI(base64) {
+    var response = await fetch('/api/analyze', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-            contents: [{
-                parts: [
-                    { inline_data: { mime_type: 'image/jpeg', data: base64 } },
-                    { text: prompt }
-                ]
-            }],
-            generationConfig: { temperature: 0.1, maxOutputTokens: 2048 }
-        })
+        body: JSON.stringify({ base64: base64 })
     });
 
     if (!response.ok) {
@@ -799,7 +742,6 @@ async function callGeminiAPI(base64, apiKey) {
 
     var result = await response.json();
 
-    // Handle blocked or empty responses
     var candidate = result.candidates && result.candidates[0];
     if (!candidate) throw new Error('Sin respuesta de la IA. Inténtalo de nuevo.');
     if (candidate.finishReason === 'SAFETY') throw new Error('Imagen bloqueada por filtros de seguridad. Prueba con otra foto.');
