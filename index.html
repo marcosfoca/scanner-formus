@@ -723,7 +723,7 @@ async function callGeminiAPI(base64, apiKey) {
         '- Devuelve SOLO el JSON, sin explicaciones.'
     ].join('\n');
 
-    var url = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=' + apiKey;
+    var url = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=' + apiKey;
 
     var response = await fetch(url, {
         method: 'POST',
