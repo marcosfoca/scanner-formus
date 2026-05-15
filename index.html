@@ -161,6 +161,35 @@
         }
         .bm-link:hover { opacity: .9; }
 
+        /* Modal overlay */
+        .modal-overlay {
+            display: none; position: fixed; inset: 0;
+            background: rgba(0,0,0,.75); z-index: 100;
+            align-items: center; justify-content: center; padding: 20px;
+        }
+        .modal-overlay.open { display: flex; }
+        .modal-box {
+            background: #fff; border-radius: 14px; padding: 24px;
+            max-width: 420px; width: 100%; box-shadow: 0 8px 32px rgba(0,0,0,.3);
+        }
+        .modal-box h2 { color: var(--blue); margin-bottom: 14px; font-size: 1.1rem; }
+        .step-list { list-style: none; margin: 14px 0; }
+        .step-list li {
+            display: flex; gap: 12px; align-items: flex-start;
+            margin-bottom: 14px; font-size: .9rem; line-height: 1.5;
+        }
+        .step-num {
+            background: var(--red); color: #fff; border-radius: 50%;
+            width: 26px; height: 26px; min-width: 26px;
+            display: flex; align-items: center; justify-content: center;
+            font-weight: 700; font-size: .8rem;
+        }
+        .required-badge {
+            display: inline-block; background: #fee2e2; color: #991b1b;
+            font-size: .7rem; font-weight: 700; padding: 1px 6px;
+            border-radius: 4px; margin-left: 4px; vertical-align: middle;
+        }
+
         /* Radio group */
         .radio-group { display: flex; flex-wrap: wrap; gap: 8px; }
         .radio-group label {
@@ -513,7 +542,7 @@
                     <option value="0">Selecciona...</option>
                     <option value="1">D2D</option>
                     <option value="2">PYMES</option>
-                    <option value="3">F2F</option>
+                    <option value="3" selected>F2F</option>
                     <option value="4">ADIF</option>
                     <option value="5">C. COMERCIALES</option>
                     <option value="6">EVENTO</option>
@@ -527,11 +556,18 @@
                 </select>
             </div>
             <div class="form-group">
-                <label>Tipo de socio</label>
+                <label>Tipo de socio <span class="required-badge">OBLIGATORIO</span></label>
                 <select id="f-cupsE">
-                    <option value="">Selecciona...</option>
-                    <option value="SOCIO">Socio</option>
+                    <option value="">— Selecciona —</option>
+                    <option value="SOCIO">Alta nueva (Socio)</option>
                     <option value="AUMENTO DE CUOTA">Aumento de cuota</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label>Idioma</label>
+                <select id="f-distribuidora2">
+                    <option value="CASTELLÀ" selected>Castellano</option>
+                    <option value="CATALÀ">Català</option>
                 </select>
             </div>
             <div class="form-group">
@@ -564,20 +600,36 @@
             <button class="btn btn-gray" onclick="goTo(1)">← Volver a Escanear</button>
         </div>
 
-        <div class="card" id="after-open-msg" style="display:none;">
-            <div class="alert alert-ok">
-                <strong>✅ Formulario abierto en nueva pestaña.</strong><br>
-                Ahora haz clic en el marcador <strong>"Rellenar Formulario F2F"</strong>
-                en tu barra de marcadores para rellenar los datos automáticamente.
-            </div>
-            <p style="font-size:.82rem;color:#666;margin-top:8px;">
-                Si aún no tienes el marcador instalado, vuelve al Paso 1 y arrástralo
-                a tu barra de marcadores.
-            </p>
-        </div>
     </div>
 
 </div><!-- /container -->
+
+<!-- ========== MODAL: instrucciones post-apertura ========== -->
+<div class="modal-overlay" id="instructions-modal">
+    <div class="modal-box">
+        <h2>📋 El formulario está abierto</h2>
+        <p style="font-size:.85rem;color:#555;">Para que los datos aparezcan rellenados, sigue estos pasos:</p>
+        <ul class="step-list">
+            <li>
+                <span class="step-num">1</span>
+                <span>Cambia a la <strong>nueva pestaña</strong> que se acaba de abrir con el formulario.</span>
+            </li>
+            <li>
+                <span class="step-num">2</span>
+                <span>Haz clic en el marcador <strong>"🚀 Rellenar Formulario F2F"</strong> de tu barra de favoritos.</span>
+            </li>
+            <li>
+                <span class="step-num">3</span>
+                <span>Los campos se rellenarán solos. Revisa y envía.</span>
+            </li>
+        </ul>
+        <div class="alert alert-warn" style="margin-bottom:14px; font-size:.8rem;">
+            <strong>¿No tienes el marcador instalado?</strong><br>
+            Vuelve aquí al Paso 1 y arrastra el botón amarillo a tu barra de favoritos. Solo se hace una vez.
+        </div>
+        <button class="btn btn-blue" onclick="closeModal()">Entendido ✓</button>
+    </div>
+</div>
 
 <script>
 // ─── State ──────────────────────────────────────────────────────────────────
@@ -625,7 +677,8 @@ function handlePhotoCapture(event) {
 function retakePhoto() {
     capturedDataUrl = null;
     document.getElementById('photo-preview').style.display = 'none';
-    document.getElementById('photo-input').value = '';
+    document.getElementById('photo-input-camera').value = '';
+    document.getElementById('photo-input-gallery').value = '';
 }
 
 // ─── Image Compression ───────────────────────────────────────────────────────
@@ -803,6 +856,7 @@ function fillForm(d) {
 
     if (d.dia_cargo) sv('f-tarifa', d.dia_cargo);
     if (d.sexo)      sv('f-sppgas', d.sexo);
+    // distribuidora2 keeps its default (CASTELLÀ) unless AI detects otherwise
 
     if (d.periodo) {
         document.querySelectorAll('[name="r-api"]').forEach(function(r) {
@@ -861,6 +915,7 @@ function collectData() {
         comp10:             gv('f-comp10'),
         cupsE:              gv('f-cupsE'),
         sppgas:             gv('f-sppgas'),
+        distribuidora2:     gv('f-distribuidora2'),
         api:                api,
         observaciones_llamada: gv('f-observaciones')
     };
@@ -869,14 +924,15 @@ function collectData() {
 // ─── Open Target Form ─────────────────────────────────────────────────────────
 function openTargetForm() {
     var data = collectData();
-    // Encode as base64 (safe for non-ASCII via encodeURIComponent)
     var json = JSON.stringify(data);
     var encoded = btoa(unescape(encodeURIComponent(json)));
     var url = 'https://comercial.topf2f.com/cc_fichasnew.php#f2f=' + encoded;
     window.open(url, '_blank');
-    var msg = document.getElementById('after-open-msg');
-    msg.style.display = 'block';
-    msg.scrollIntoView({ behavior: 'smooth' });
+    document.getElementById('instructions-modal').classList.add('open');
+}
+
+function closeModal() {
+    document.getElementById('instructions-modal').classList.remove('open');
 }
 
 // ─── Bookmarklet Builder ──────────────────────────────────────────────────────
@@ -920,6 +976,7 @@ function buildBookmarklet() {
             's("comp10",d.comp10);' +
             's("cupsE",d.cupsE);' +
             's("sppgas",d.sppgas);' +
+            's("distribuidora2",d.distribuidora2);' +
             's("observaciones_llamada",d.observaciones_llamada);' +
             'if(d.api!==undefined){' +
                 'document.querySelectorAll("[name=\\"API\\"]").forEach(function(r){r.checked=(r.value==d.api);});' +
